@@ -10,7 +10,7 @@ terraform {
 
   backend "s3" {
     bucket = "bucket-fiap56-to-remote-state"
-    key    = "aws-rds-pedido-fiap56/terraform.tfstate"
+    key    = "aws-cognito-fiap56/terraform.tfstate"
     region = "us-east-1"
   }
 }
@@ -20,27 +20,6 @@ provider "aws" {
 }
 
 resource "aws_default_vpc" "default_vpc" {
-}
-
-#create a security group for RDS Database Instance
-resource "aws_security_group" "rds_sg" {
-  vpc_id        = aws_default_vpc.default_vpc.id
-  name = "rds_bd_${var.nome-db-servico}_sg"
-  ingress {
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  tags = {
-    Name = "rds_${var.nome-db-servico}_sg"
-  }
 }
 
 # Provide references to your default subnets
@@ -59,43 +38,61 @@ resource "aws_default_subnet" "default_subnet_b" {
 #  availability_zone = "us-east-1c"
 #}
 
-resource "aws_db_subnet_group" "feasteats_db_subnet_group" {
-  name = "feasteats-${var.nome-db-servico}-db-subnet-group"
-  #subnet_ids = [aws_default_subnet.default_subnet_a.id, aws_default_subnet.default_subnet_b.id, aws_default_subnet.default_subnet_c.id]
-  subnet_ids = [aws_default_subnet.default_subnet_a.id,aws_default_subnet.default_subnet_b.id]
-  tags = {
-    Name = "feasteats-${var.nome-db-servico}-db-subnet-group"
-  }
+// Resources
+resource "aws_cognito_user_pool" "user_pool" {
+    name = "user-pool-feasteasts"
+
+      username_attributes = ["email"]
+        auto_verified_attributes = ["email"]
+          password_policy {
+                minimum_length = 6
+          }
+
+            verification_message_template {
+                  default_email_option = "CONFIRM_WITH_CODE"
+                      email_subject = "Account Confirmation"
+                          email_message = "Your confirmation code is {####}"
+            }
+
+              schema {
+                    attribute_data_type      = "String"
+                        developer_only_attribute = false
+                            mutable                  = true
+                                name                     = "email"
+                                    required                 = true
+
+                                        string_attribute_constraints {
+                                                min_length = 1
+                                                      max_length = 256
+                                        }
+              }
 }
 
+resource "aws_cognito_user_pool_client" "client" {
+    name = "cognito-client-feateats"
 
-
-resource "aws_db_instance" "msyql_rds" {
-
-  allocated_storage       = var.allocated_storage
-  storage_type            = var.storage_type
-  engine                  = var.engine
-  engine_version          = var.engine_version
-  instance_class          = var.instance_class
-  db_name                 = jsondecode(data.aws_secretsmanager_secret_version.mysql_credentials.secret_string)["dbname"]
-  username                = jsondecode(data.aws_secretsmanager_secret_version.mysql_credentials.secret_string)["username"]
-  password                = jsondecode(data.aws_secretsmanager_secret_version.mysql_credentials.secret_string)["password"]
-  port                    = jsondecode(data.aws_secretsmanager_secret_version.mysql_credentials.secret_string)["port"]
-  identifier              = var.identifier
-  parameter_group_name    = var.parameter_group_name
-  db_subnet_group_name    = aws_db_subnet_group.feasteats_db_subnet_group.name
-  skip_final_snapshot     = var.skip_final_snapshot
-  publicly_accessible     = var.publicly_accessible
-  vpc_security_group_ids  = [aws_security_group.rds_sg.id]
-  backup_retention_period = var.backup_retention_period
-  multi_az = false
+      user_pool_id = aws_cognito_user_pool.user_pool.id
+        generate_secret = false
+          refresh_token_validity = 90
+            prevent_user_existence_errors = "ENABLED"
+              explicit_auth_flows = [
+                    "ALLOW_REFRESH_TOKEN_AUTH",
+                        "ALLOW_USER_PASSWORD_AUTH",
+                            "ALLOW_ADMIN_USER_PASSWORD_AUTH"
+              ]
+                
 }
 
-data "aws_secretsmanager_secret" "mysql" {
-  name = "prod/soat1grupo56/Pedido"
+resource "aws_cognito_user_pool_domain" "cognito-domain" {
+    domain       = "feasteats"
+      user_pool_id = "${aws_cognito_user_pool.user_pool.id}"
 }
-
-data "aws_secretsmanager_secret_version" "mysql_credentials" {
-  secret_id = data.aws_secretsmanager_secret.mysql.id
+}
+              ]
+}
+                                        }
+              }
+            }
+          }
 }
 
