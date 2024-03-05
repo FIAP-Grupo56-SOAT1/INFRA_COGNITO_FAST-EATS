@@ -40,7 +40,7 @@ resource "aws_default_subnet" "default_subnet_b" {
 
 // Resources
 resource "aws_cognito_user_pool" "user_pool" {
-    name = "user-pool"
+    name = "user-pool-feasteasts"
 
       username_attributes = ["email"]
         auto_verified_attributes = ["email"]
@@ -69,7 +69,7 @@ resource "aws_cognito_user_pool" "user_pool" {
 }
 
 resource "aws_cognito_user_pool_client" "client" {
-    name = "cognito-client"
+    name = "cognito-client-feateats"
 
       user_pool_id = aws_cognito_user_pool.user_pool.id
         generate_secret = false
@@ -84,7 +84,7 @@ resource "aws_cognito_user_pool_client" "client" {
 }
 
 resource "aws_cognito_user_pool_domain" "cognito-domain" {
-    domain       = "gabrielaraujo"
+    domain       = "feasteats"
       user_pool_id = "${aws_cognito_user_pool.user_pool.id}"
 }
 }
