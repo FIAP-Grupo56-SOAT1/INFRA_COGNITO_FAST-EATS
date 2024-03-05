@@ -47,6 +47,6 @@ variable "nome-db-servico" {
 }
 
 variable "publicly_accessible" {
-  type = bool
+  type    = bool
   default = true
 }
